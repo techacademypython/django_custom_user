@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Bootstrap Example</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <style>
+        #snackbar {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            left: 50%;
+            bottom: 30px;
+            font-size: 17px;
+        }
+
+        #snackbar.show {
+            visibility: visible;
+            -webkit-animation: fadein 0.5s, fadeout 0.5s 2.5s;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @-webkit-keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadein {
+            from {
+                bottom: 0;
+                opacity: 0;
+            }
+            to {
+                bottom: 30px;
+                opacity: 1;
+            }
+        }
+
+        @-webkit-keyframes fadeout {
+            from {
+                bottom: 30px;
+                opacity: 1;
+            }
+            to {
+                bottom: 0;
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeout {
+            from {
+                bottom: 30px;
+                opacity: 1;
+            }
+            to {
+                bottom: 0;
+                opacity: 0;
+            }
+        }
+    </style>
+    <script type="application/javascript">
+        function snackbar(text) {
+            var x = document.getElementById("snackbar");
+            x.className = "show";
+            x.innerHTML = text;
+            setTimeout(function () {
+                x.className = x.className.replace("show", "");
+            }, 3000);
+        }
+    </script>
+</head>
+<body>
+
+<div class="jumbotron text-center">
+    <h1>Like Something</h1>
+</div>
+
+<div class="container">
+    <div class="row">
+        {% for post in post_list %}
+            <div class="col-sm-4">
+                <h3>{{ post.name }}</h3>
+                <p>Like count <strong class="like-{{ post.id }}">{{ post.like_count }}</strong></p>
+                {% if request.user in post.get_likers %}
+                    <button class="btn btn-danger like" data-id="{{ post.id }}">Unlike</button>
+                {% else %}
+                    <button class="btn btn-success like" data-id="{{ post.id }}">Like</button>
+                {% endif %}
+            </div>
+        {% endfor %}
+
+    </div>
+</div>
+<div id="snackbar"></div>
+<script>
+    function csrfSafeMethod(method) {
+        // these HTTP methods do not require CSRF protection
+        return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
+    }
+
+    $.ajaxSetup({
+        beforeSend: function (xhr, settings) {
+            if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
+                xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+            }
+        }
+    });
+    $(document).ready(function () {
+        $(".like").click(function (e) {
+            var post_id = $(this).attr("data-id");
+            var button = $(this);
+            var form = new FormData();
+            form.append("post_id", post_id);
+            $.ajax({
+                method: "POST",
+                processData: false,
+                contentType: false,
+                data: form,
+                success: function (data) {
+                    console.log(data);
+                    snackbar(data.message);
+                    $(".like-" + post_id).text(data.like_count);
+                    if (data.status) {
+                        button.text("Like");
+                        button.removeClass("btn-danger");
+                        button.addClass("btn-success");
+                    } else {
+                        button.text("Unlike");
+                        button.addClass("btn-danger");
+                        button.removeClass("btn-success");
+                    }
+                },
+                error: function (xhr, msg, text) {
+                    console.log(xhr, msg, text);
+                }
+            })
+        });
+    });
+</script>
+</body>
+</html>
